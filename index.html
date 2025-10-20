@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=800">
+    <title>Premium Spend Tracker (One File)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom Dark Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        /* Main Dark Theme Background */
+        body {
+            background-color: #0f172a; /* slate-900 */
+            color: #f8fafc; /* slate-50 */
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s;
+        }
+
+        /* Basic Card Animation Style */
+        .expense-item {
+            transition: all 0.3s ease-in-out;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body onload="initApp()">
+
+    <div class="min-h-screen">
+        <header class="bg-slate-800 p-6 shadow-2xl sticky top-0 z-40 border-b-4 border-indigo-700/50">
+            <div class="max-w-6xl mx-auto">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                    <h1 class="text-3xl font-extrabold text-white tracking-tight flex items-center mb-4 md:mb-0">
+                        <i data-lucide="file-text" class="w-7 h-7 mr-2 text-indigo-400"></i>
+                        Spend Tracker
+                    </h1>
+                    <button id="setBudgetBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-lg transition-colors flex items-center text-sm font-medium">
+                        <i data-lucide="settings" class="w-4 h-4 mr-1"></i> Set Budget
+                    </button>
+                </div>
+
+                <div id="summaryCard" class="p-4 md:p-6 bg-slate-900/70 backdrop-blur-sm rounded-xl shadow-inner border border-indigo-800/50">
+                    <div class="flex flex-col sm:flex-row justify-around text-center space-y-4 sm:space-y-0">
+                        <div>
+                            <p class="text-sm font-medium text-slate-400 uppercase">Total Budget</p>
+                            <span id="totalBudget" class="text-3xl font-extrabold text-indigo-400">₹0.00</span>
+                        </div>
+                        <div class="border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-4 sm:pt-0"></div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-400 uppercase">Total Spent</p>
+                            <span id="totalSpent" class="text-3xl font-extrabold text-red-400">₹0.00</span>
+                        </div>
+                        <div class="border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-4 sm:pt-0"></div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-400 uppercase">Remaining</p>
+                            <span id="remainingBudget" class="text-3xl font-extrabold text-green-400">₹0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-6xl mx-auto p-4 md:p-8">
+            <div class="bg-slate-800 p-6 rounded-xl shadow-2xl mb-8 border border-slate-700">
+                <h2 class="text-xl font-semibold text-indigo-300 mb-4">Add New Expense</h2>
+                <form id="addExpenseForm" class="flex flex-col md:flex-row gap-4">
+                    <input
+                        type="text"
+                        id="expenseInput"
+                        placeholder="e.g., Apple 5 1.20"
+                        class="flex-1 p-3 bg-slate-900 text-white rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
+                        aria-label="New expense in format: ItemName Quantity UnitPrice"
+                        required
+                    />
+                    <button
+                        type="submit"
+                        class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center"
+                        aria-label="Add Expense"
+                    >
+                        <i data-lucide="plus" class="w-5 h-5 mr-2"></i>
+                        Add Expense
+                    </button>
+                </form>
+                
+                <div class="mt-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                    <div class="relative w-full sm:w-1/2">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400"></i>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search items..."
+                            class="w-full pl-10 pr-4 py-2 bg-slate-900 text-white rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
+                            aria-label="Search expenses"
+                        />
+                    </div>
+                    
+                    <div class="flex space-x-3 w-full sm:w-auto justify-end">
+                        <button id="exportPdfBtn" class="p-2 rounded-full bg-slate-600 text-slate-300 hover:bg-red-500/50 transition-colors" title="Export to PDF" aria-label="Export to PDF">
+                            <i data-lucide="download" class="w-6 h-6"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="text-2xl font-bold text-indigo-300 mb-4">Expense History</h2>
+            <div id="expenseList" class="space-y-4">
+                </div>
+
+            <div id="emptyState" class="text-center p-10 bg-slate-800/50 rounded-xl mt-10 border border-dashed border-slate-700 hidden">
+                <i data-lucide="wallet" class="w-12 h-12 mx-auto text-indigo-400 mb-4"></i>
+                <h2 class="text-2xl font-bold text-white mb-2">Start Tracking</h2>
+                <p class="text-slate-400">Enter an expense above (e.g., Item 1 5.99) to begin your tracking journey.</p>
+            </div>
+        </main>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+    <div id="budgetModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-md border border-indigo-700/50">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-white mb-4">Set Total Budget</h2>
+                <button onclick="document.getElementById('budgetModal').classList.add('hidden')" class="text-slate-400 hover:text-white transition-colors p-1 rounded-full hover:bg-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p class="text-slate-400 mb-4">Enter the maximum amount you plan to spend.</p>
+
+            <label for="newBudgetInput" class="block text-sm font-medium text-indigo-300 mb-1">Budget Amount (₹)</label>
+            <input
+                type="number"
+                id="newBudgetInput"
+                step="0.01"
+                placeholder="e.g., 500.00"
+                class="w-full p-3 bg-slate-900 text-white rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+            />
+            <button id="saveBudgetBtn" class="w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition-colors flex items-center justify-center">
+                <i data-lucide="save" class="w-5 h-5 mr-2"></i>
+                Save Budget
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Core Application State & Persistence ---
+
+        const STORAGE_KEY = 'nikcoderSpendTrackerData';
+        let appState = {
+            budget: 0,
+            expenses: [],
+            lastId: 0
+        };
+
+        /** Loads state from localStorage or returns a blank state. */
+        function loadState() {
+            try {
+                const serializedState = localStorage.getItem(STORAGE_KEY);
+                if (serializedState === null) {
+                    return appState; // Return initial blank state
+                }
+                const loadedState = JSON.parse(serializedState);
+                // Ensure data structure is maintained
+                return {
+                    budget: loadedState.budget || 0,
+                    expenses: loadedState.expenses || [],
+                    lastId: loadedState.lastId || 0
+                };
+            } catch (e) {
+                console.error("Error loading state:", e);
+                return appState;
+            }
+        }
+
+        /** Saves the current state to localStorage. */
+        function saveState() {
+            try {
+                const serializedState = JSON.stringify(appState);
+                localStorage.setItem(STORAGE_KEY, serializedState);
+            } catch (e) {
+                console.error("Error saving state:", e);
+            }
+        }
+
+        // --- UI Helper Functions ---
+
+        /** Shows a modern toast notification. */
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let colorClass = 'bg-blue-600 border-blue-700';
+            let iconHtml = '<i data-lucide="info" class="w-5 h-5 mr-2"></i>';
+            if (type === 'success') {
+                colorClass = 'bg-green-600 border-green-700';
+                iconHtml = '<i data-lucide="check" class="w-5 h-5 mr-2"></i>';
+            } else if (type === 'error') {
+                colorClass = 'bg-red-600 border-red-700';
+                iconHtml = '<i data-lucide="x" class="w-5 h-5 mr-2"></i>';
+            }
+
+            toast.className = `p-4 rounded-lg shadow-xl text-white font-semibold border-b-4 ${colorClass} transition-all duration-300 transform translate-y-0 opacity-100`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    ${iconHtml}
+                    <p>${message}</p>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons(); // Re-render icons in new element
+
+            // Fade out and remove after 3 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        /** Formats a number to currency string. */
+        function formatCurrency(amount) {
+            return amount.toFixed(2);
+        }
+
+        // --- Data Calculation and Rendering ---
+
+        /** Calculates totals and updates the header summary. */
+        function updateSummary() {
+            const totalSpent = appState.expenses.reduce((sum, exp) => sum + exp.cost, 0);
+            const remainingBudget = appState.budget - totalSpent;
+
+            document.getElementById('totalBudget').textContent = `$${formatCurrency(appState.budget)}`;
+            document.getElementById('totalSpent').textContent = `$${formatCurrency(totalSpent)}`;
+            
+            const remainingEl = document.getElementById('remainingBudget');
+            remainingEl.textContent = `$${formatCurrency(Math.abs(remainingBudget))}`;
+
+            // Update color based on remaining budget
+            remainingEl.classList.remove('text-green-400', 'text-red-600');
+            if (remainingBudget >= 0) {
+                remainingEl.classList.add('text-green-400');
+            } else {
+                remainingEl.classList.add('text-red-600');
+            }
+
+            // Show Overspent status
+            if (remainingBudget < 0) {
+                remainingEl.insertAdjacentHTML('beforeend', '<span class="text-sm font-normal text-red-400 ml-1">(Over)</span>');
+            }
+        }
+
+        /** Renders a single expense card HTML. */
+        function createExpenseCard(expense) {
+            const costFormatted = formatCurrency(expense.cost);
+            const unitPriceFormatted = formatCurrency(expense.unitPrice);
+            
+            const card = document.createElement('div');
+            card.id = `expense-${expense.id}`;
+            card.className = `expense-item flex flex-col md:flex-row justify-between items-start md:items-center p-4 rounded-xl shadow-lg bg-slate-700/50 hover:bg-slate-700 border border-slate-600`;
+            card.innerHTML = `
+                <div class="flex flex-col md:flex-row md:items-center min-w-0 flex-1">
+                    <span class="text-xl font-semibold text-indigo-300 truncate mb-1 md:mb-0 md:mr-4" data-id="item-name-${expense.id}">${expense.item}</span>
+                    <span class="text-sm text-slate-400" data-id="item-details-${expense.id}">${expense.quantity} units @ $${unitPriceFormatted} each</span>
+                </div>
+
+                <div class="flex items-center mt-3 md:mt-0">
+                    <span class="text-2xl font-bold text-green-400 mr-4" data-id="item-cost-${expense.id}">$${costFormatted}</span>
+                    <div class="flex space-x-2">
+                        <button onclick="toggleEdit(${expense.id})" class="p-2 rounded-full bg-slate-600 text-slate-300 hover:bg-yellow-500/50 hover:text-yellow-300 transition-colors" title="Edit" aria-label="Edit Expense">
+                            <i data-lucide="edit-2" class="w-5 h-5"></i>
+                        </button>
+                        <button onclick="deleteExpense(${expense.id})" class="p-2 rounded-full bg-slate-600 text-slate-300 hover:bg-red-500/50 hover:text-red-300 transition-colors" title="Delete" aria-label="Delete Expense">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            lucide.createIcons();
+            return card;
+        }
+
+        /** Renders the list of expenses based on search term. */
+        function renderExpenses(searchTerm = '') {
+            const listContainer = document.getElementById('expenseList');
+            listContainer.innerHTML = '';
+            
+            const lowerSearchTerm = searchTerm.toLowerCase();
+
+            const filteredExpenses = appState.expenses
+                .filter(exp => exp.item.toLowerCase().includes(lowerSearchTerm));
+
+            // Sort by date descending (newest first)
+            filteredExpenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (filteredExpenses.length === 0 && appState.expenses.length > 0) {
+                listContainer.innerHTML = `<div class="text-center p-6 bg-slate-800/50 rounded-xl mt-4"><p class="text-xl text-slate-400">No expenses found matching "${searchTerm}".</p></div>`;
+                document.getElementById('emptyState').classList.add('hidden');
+            } else if (appState.expenses.length === 0) {
+                document.getElementById('emptyState').classList.remove('hidden');
+            } else {
+                filteredExpenses.forEach(expense => {
+                    listContainer.appendChild(createExpenseCard(expense));
+                });
+                document.getElementById('emptyState').classList.add('hidden');
+            }
+        }
+
+        // --- CRUD and Core Logic ---
+
+        /** Event handler for the Add Expense form submission. */
+        function handleAddExpense(event) {
+            event.preventDefault();
+            const input = document.getElementById('expenseInput');
+            const rawInput = input.value.trim();
+            if (!rawInput) return;
+
+            // Regex to split: text followed by two numbers (item, quantity, price)
+            const parts = rawInput.match(/(.+)\s+(\d+(\.\d+)?)\s+(\d+(\.\d+)?)$/);
+            
+            if (!parts || parts.length < 5) {
+                showToast('Format error. Use: Item Name Quantity UnitPrice (e.g., Apple Pie 2 3.50)', 'error');
+                return;
+            }
+
+            // parts[1] is the item name (group 1), parts[2] is quantity (group 2), parts[4] is unit price (group 4)
+            const item = parts[1].trim();
+            const quantity = parseFloat(parts[2]);
+            const unitPrice = parseFloat(parts[4]);
+
+            if (item === "" || isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
+                showToast('Invalid data. Check Item Name, Quantity (> 0), and Unit Price (>= 0).', 'error');
+                return;
+            }
+
+            const newExpense = {
+                id: ++appState.lastId,
+                item: item,
+                quantity: quantity,
+                unitPrice: unitPrice,
+                cost: quantity * unitPrice,
+                date: new Date().toISOString()
+            };
+
+            appState.expenses.unshift(newExpense); // Add to the start
+            saveState();
+            input.value = '';
+            renderExpenses(document.getElementById('searchInput').value);
+            updateSummary();
+            showToast('Expense added!', 'success');
+        }
+
+        /** Deletes an expense by ID. */
+        function deleteExpense(id) {
+            appState.expenses = appState.expenses.filter(exp => exp.id !== id);
+            saveState();
+            renderExpenses(document.getElementById('searchInput').value);
+            updateSummary();
+            showToast('Expense deleted.', 'info');
+        }
+
+        /** Toggles the editing state for an expense card. */
+        function toggleEdit(id) {
+            const card = document.getElementById(`expense-${id}`);
+            const expense = appState.expenses.find(e => e.id === id);
+            if (!expense) return;
+
+            const nameEl = card.querySelector(`[data-id="item-name-${id}"]`);
+            const detailsEl = card.querySelector(`[data-id="item-details-${id}"]`);
+            const costEl = card.querySelector(`[data-id="item-cost-${id}"]`);
+            const editBtn = card.querySelector('[title="Edit"]');
+
+            if (nameEl.tagName === 'INPUT') {
+                // Currently in edit mode, so save
+                const rawInput = nameEl.value.trim();
+                const parts = rawInput.match(/(.+)\s+(\d+(\.\d+)?)\s+(\d+(\.\d+)?)$/);
+
+                if (!parts || parts.length < 5) {
+                    showToast('Invalid format. Cannot save.', 'error');
+                    return;
+                }
+
+                const newItem = parts[1].trim();
+                const newQuantity = parseFloat(parts[2]);
+                const newUnitPrice = parseFloat(parts[4]);
+                
+                if (newItem === "" || isNaN(newQuantity) || newQuantity <= 0 || isNaN(newUnitPrice) || newUnitPrice < 0) {
+                    showToast('Invalid values. Save canceled.', 'error');
+                    return;
+                }
+
+                // Update the state
+                const updatedExpense = {
+                    ...expense,
+                    item: newItem,
+                    quantity: newQuantity,
+                    unitPrice: newUnitPrice,
+                    cost: newQuantity * newUnitPrice
+                };
+                
+                appState.expenses = appState.expenses.map(e => e.id === id ? updatedExpense : e);
+                saveState();
+                
+                // Re-render display elements
+                nameEl.outerHTML = `<span class="text-xl font-semibold text-indigo-300 truncate mb-1 md:mb-0 md:mr-4" data-id="item-name-${id}">${updatedExpense.item}</span>`;
+                detailsEl.textContent = `${updatedExpense.quantity} units @ $${formatCurrency(updatedExpense.unitPrice)} each`;
+                costEl.textContent = `$${formatCurrency(updatedExpense.cost)}`;
+                editBtn.innerHTML = '<i data-lucide="edit-2" class="w-5 h-5"></i>';
+                editBtn.title = "Edit";
+                
+                // Re-fetch elements after replacement
+                lucide.createIcons();
+                showToast('Expense updated!', 'success');
+
+            } else {
+                // Currently in display mode, so switch to edit
+                const currentValue = `${expense.item} ${expense.quantity} ${formatCurrency(expense.unitPrice)}`;
+
+                // Replace display with input
+                nameEl.outerHTML = `
+                    <input type="text" value="${currentValue}" data-id="item-name-${id}" 
+                           class="flex-1 p-2 bg-slate-900 text-white rounded-lg border border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2 w-full"
+                           aria-label="Edit item, quantity, and price">
+                `;
+                detailsEl.textContent = 'Edit mode active...';
+                
+                // Change button to Save icon
+                editBtn.innerHTML = '<i data-lucide="save" class="w-5 h-5"></i>';
+                editBtn.title = "Save";
+
+                // Re-fetch new input element and focus
+                const newInput = card.querySelector(`[data-id="item-name-${id}"]`);
+                if(newInput) newInput.focus();
+
+                lucide.createIcons();
+            }
+        }
+
+        /** Handles setting/saving the total budget. */
+        function handleSetBudget() {
+            const input = document.getElementById('newBudgetInput');
+            const newBudget = parseFloat(input.value);
+
+            if (isNaN(newBudget) || newBudget < 0) {
+                showToast('Please enter a valid non-negative budget amount.', 'error');
+                return;
+            }
+
+            appState.budget = newBudget;
+            saveState();
+            updateSummary();
+            document.getElementById('budgetModal').classList.add('hidden');
+            showToast('Budget updated successfully.', 'success');
+        }
+
+        /** Generates a professional, white-background PDF (via browser print). */
+        function generatePDFReport() {
+            const totalSpent = appState.expenses.reduce((sum, e) => sum + e.cost, 0);
+            const remaining = appState.budget - totalSpent;
+            
+            // Create a clean HTML structure for printing
+            const printContent = `
+                <style>
+                    @page { margin: 1in; }
+                    body { font-family: sans-serif; color: #333; background: #fff; }
+                    h1, h2 { color: #1e3a8a; border-bottom: 2px solid #e0e7ff; padding-bottom: 5px; margin-top: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+                    th { background-color: #f3f4f6; font-weight: bold; }
+                    .summary { padding: 15px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }
+                    .summary p { margin: 8px 0; font-size: 1.1em; }
+                    .footer { text-align: right; margin-top: 40px; font-size: 0.9em; color: #666; }
+                </style>
+                <h1>💵 Spend Tracker Financial Report</h1>
+                
+                <h2>Summary</h2>
+                <div class="summary">
+                    <p><strong>Total Budget:</strong> $${formatCurrency(appState.budget)}</p>
+                    <p><strong>Total Spent:</strong> $${formatCurrency(totalSpent)}</p>
+                    <p><strong>Remaining Budget:</strong> <span style="color: ${remaining >= 0 ? 'green' : 'red'}; font-weight: bold;">$${formatCurrency(remaining)}</span></p>
+                    <p><em>Report Date: ${new Date().toLocaleDateString()}</em></p>
+                </div>
+                
+                <h2>Expense Details (${appState.expenses.length} Items)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Qty</th>
+                            <th>Unit Price</th>
+                            <th>Total Cost</th>
+                            <th>Date Added</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${appState.expenses.map(e => `
+                            <tr>
+                                <td>${e.item}</td>
+                                <td>${e.quantity}</td>
+                                <td>$${formatCurrency(e.unitPrice)}</td>
+                                <td>$${formatCurrency(e.cost)}</td>
+                                <td>${new Date(e.date).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div class="footer">
+                    <p>Generated by Coder.Nikhil</p>
+                </div>
+            `;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // --- Initialization and Event Listeners ---
+
+        function initApp() {
+            appState = loadState();
+            updateSummary();
+            renderExpenses();
+            
+            // Render Lucide Icons
+            lucide.createIcons(); 
+
+            // Set up main event listeners
+            document.getElementById('addExpenseForm').addEventListener('submit', handleAddExpense);
+            document.getElementById('searchInput').addEventListener('input', (e) => renderExpenses(e.target.value));
+            document.getElementById('setBudgetBtn').addEventListener('click', () => {
+                const modal = document.getElementById('budgetModal');
+                const input = document.getElementById('newBudgetInput');
+                input.value = appState.budget > 0 ? formatCurrency(appState.budget) : '';
+                modal.classList.remove('hidden');
+                input.focus();
+            });
+            document.getElementById('saveBudgetBtn').addEventListener('click', handleSetBudget);
+            document.getElementById('exportPdfBtn').addEventListener('click', generatePDFReport);
+        }
+    </script>
+</body>
+</html>
