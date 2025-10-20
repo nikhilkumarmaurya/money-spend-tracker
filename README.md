@@ -19,6 +19,9 @@ It allows users to track their spending against a set budget using a simple inpu
 * **PDF Export:** Generate a clean, printable financial report of all expenses and the budget summary.
 * **Toast Notifications:** Provides real-time feedback for adding, deleting, and updating data.
 
+<img src="https://i.ibb.co/Tqbny1bb/Screenshot-20251020-213525-Chrome.jpg" alt="Screenshot-20251020-213525-Chrome" border="0">
+
+
 ## 🚀 How to Use
 
 ### 1. Setup
