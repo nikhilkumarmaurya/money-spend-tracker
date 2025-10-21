@@ -20,6 +20,7 @@ It allows users to track their spending against a set budget using a simple inpu
 * **Toast Notifications:** Provides real-time feedback for adding, deleting, and updating data.
 
 See this Images
+<br>
 https://i.ibb.co/RT2tk4Gh/Screenshot-20251020-213525-Chrome.jpg
 <br>
 https://i.ibb.co/7JXqxwWB/Screenshot-20251020-213535-Print-Spooler.jpg
